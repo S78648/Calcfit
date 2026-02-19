@@ -28,6 +28,7 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private UserStatusEnum status = UserStatusEnum.ACTIVE;
 
     @Column(name = "created_at", nullable = false, updatable = false)

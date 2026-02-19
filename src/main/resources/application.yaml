@@ -1,20 +1,12 @@
 spring:
   application:
     name: calcfit
-  datasource:
-      url: jdbc:postgresql://localhost:5432/calorie_db
-      username: postgres
-      password: Sumit8077315043
 
   jpa:
-      hibernate:
-        ddl-auto: validate
-      show-sql: true
-      properties:
-        hibernate:
-          format_sql: true
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
 
   flyway:
-      enabled: true
-      baseline-on-migrate: true
+    enabled: true
 

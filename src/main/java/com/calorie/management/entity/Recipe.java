@@ -3,6 +3,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 
@@ -36,6 +37,20 @@ public class Recipe {
             foreignKey = @ForeignKey(name = "fk_recipes_nutrition")
     )
     private NutritionProfile nutritionProfile;
+
+    @OneToMany(
+            mappedBy = "recipe",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private Set<RecipeStep> steps;
+
+    @OneToMany(
+            mappedBy = "recipe",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private Set<RecipeDietaryLabel> dietaryLabels;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

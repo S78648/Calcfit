@@ -53,6 +53,8 @@ public class NutritionProfile {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
+
+    @Builder.Default
     private Set<NutritionMicronutrient> micronutrients = new HashSet<>();
 
     @PrePersist
