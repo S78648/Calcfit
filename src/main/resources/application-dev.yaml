@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/calorie_db
+    username: postgres
+    password: Sumit8077315043
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
