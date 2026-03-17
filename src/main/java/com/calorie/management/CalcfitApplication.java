@@ -8,7 +8,6 @@ public class CalcfitApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(CalcfitApplication.class, args);
-		System.out.println(System.getenv("DB_PASSWORD"));
 
 	}
 
