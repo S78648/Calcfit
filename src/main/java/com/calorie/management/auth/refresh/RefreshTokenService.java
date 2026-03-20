@@ -2,7 +2,6 @@ package com.calorie.management.auth.refresh;
 
 
 
-import com.calorie.management.entity.RefreshToken;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.stereotype.Service;

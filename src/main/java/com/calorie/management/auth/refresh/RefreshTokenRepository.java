@@ -1,6 +1,5 @@
 package com.calorie.management.auth.refresh;
 
-import com.calorie.management.entity.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
