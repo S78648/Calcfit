@@ -6,7 +6,7 @@ import com.calorie.management.auth.dto.RefreshRequest;
 import com.calorie.management.auth.dto.SignUpResponse;
 import com.calorie.management.auth.dto.TokenResponse;
 import com.calorie.management.auth.refresh.RefreshTokenService;
-import com.calorie.management.entity.RefreshToken;
+import com.calorie.management.auth.refresh.RefreshToken;
 import com.calorie.management.entity.User;
 import com.calorie.management.repository.UserRepository;
 import com.calorie.management.security.properties.JwtProperties;

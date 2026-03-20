@@ -1,5 +1,6 @@
-package com.calorie.management.entity;
+package com.calorie.management.auth.refresh;
 
+import com.calorie.management.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 

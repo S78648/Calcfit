@@ -24,9 +24,6 @@ public class FoodItem {
     @Column(nullable = false)
     private String name;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "food_type", nullable = false)
-    private FoodTypeEnum foodType;
 
     @Column(name = "serving_size", precision = 8, scale = 2)
     private BigDecimal servingSize;
