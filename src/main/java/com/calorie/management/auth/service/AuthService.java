@@ -8,6 +8,8 @@ import com.calorie.management.auth.dto.TokenResponse;
 import com.calorie.management.auth.refresh.RefreshTokenService;
 import com.calorie.management.auth.refresh.RefreshToken;
 import com.calorie.management.entity.User;
+import com.calorie.management.entity.UserProfile;
+import com.calorie.management.repository.UserProfileRepository;
 import com.calorie.management.repository.UserRepository;
 import com.calorie.management.security.properties.JwtProperties;
 import jakarta.transaction.Transactional;
@@ -31,6 +33,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final JwtProperties jwtProperties;
+    private final UserProfileRepository userProfileRepository;
 
     public TokenResponse login(LoginRequest request) {
 
@@ -72,6 +75,7 @@ public class AuthService {
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .build());
+
         return new SignUpResponse(savedUser.getId(), savedUser.getEmail());
     }
 
