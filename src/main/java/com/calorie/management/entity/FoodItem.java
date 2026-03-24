@@ -1,5 +1,4 @@
 package com.calorie.management.entity;
-import com.calorie.management.enums.FoodTypeEnum;
 import jakarta.persistence.*;
 import lombok.*;
 
