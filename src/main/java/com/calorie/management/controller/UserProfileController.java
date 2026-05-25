@@ -2,9 +2,11 @@ package com.calorie.management.controller;
 
 import com.calorie.management.dto.UserProfileRequest;
 import com.calorie.management.dto.UserProfileResponse;
-import com.calorie.management.entity.User;
+import com.calorie.management.auth.service.CustomUserDetails;
 import com.calorie.management.service.UserProfileService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -21,12 +23,12 @@ public class UserProfileController {
     // ==============================
     @PostMapping
     public ResponseEntity<UserProfileResponse> createOrUpdateProfile(
-            @RequestBody UserProfileRequest request,
-            @AuthenticationPrincipal User user
+            @Valid  @RequestBody UserProfileRequest request,
+            @AuthenticationPrincipal CustomUserDetails principal
     ) {
 
         UserProfileResponse response =
-                userProfileService.createOrUpdateProfile(user.getId(), request);
+                userProfileService.saveProfile(principal.getUser().getId(), request);
 
         return ResponseEntity.ok(response);
     }
@@ -36,12 +38,12 @@ public class UserProfileController {
     // ==============================
     @PutMapping
     public ResponseEntity<UserProfileResponse> updateProfile(
-            @RequestBody UserProfileRequest request,
-            @AuthenticationPrincipal User user
+            @Valid @RequestBody UserProfileRequest request,
+            @AuthenticationPrincipal CustomUserDetails principal
     ) {
 
         UserProfileResponse response =
-                userProfileService.updateProfile(user.getId(), request);
+                userProfileService.updateProfile(principal.getUser().getId(), request);
 
         return ResponseEntity.ok(response);
     }
@@ -51,11 +53,11 @@ public class UserProfileController {
     // ==============================
     @GetMapping
     public ResponseEntity<UserProfileResponse> getProfile(
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal CustomUserDetails principal
     ) {
 
         UserProfileResponse response =
-                userProfileService.getProfile(user.getId());
+                userProfileService.getProfile(principal.getUser().getId());
 
         return ResponseEntity.ok(response);
     }

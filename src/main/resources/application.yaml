@@ -1,6 +1,11 @@
+server:
+  port: 8060
+
 spring:
   application:
     name: calcfit
+  profiles:
+    default: dev
 
   jpa:
     hibernate:
@@ -13,5 +18,12 @@ jwt:
     secret: yncubryvxrevxtbunctctbcrxryxrxrxrdyxby
     expiration: 3600000
     refresh-expiration: 604800000
+app:
+  security:
+    jwt:
+      issuer: ${JWT_ISSUER:spring-auth-template}
+      secret: ${JWT_SECRET:change-me-in-env-please-change-me-change-me}
+      accessTokenTtlSeconds: ${JWT_ACCESS_TTL_SECONDS:900}   # 15 minutes
+      refreshTokenTtlSeconds: ${JWT_REFRESH_TTL_SECONDS:2592000}
 
 
