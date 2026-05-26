@@ -1,8 +1,11 @@
 package com.calorie.management.entity;
 
+import com.calorie.management.enums.Gender;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -28,8 +31,10 @@ public class UserProfile {
 
     private Integer age;
 
-    @Column(nullable = false)
-    private String gender;
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "gender",nullable = false)
+    private Gender gender;
 
     private BigDecimal heightCm;
 

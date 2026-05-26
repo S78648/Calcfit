@@ -6,6 +6,9 @@ spring:
     name: calcfit
   profiles:
     default: dev
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
 
   jpa:
     hibernate:

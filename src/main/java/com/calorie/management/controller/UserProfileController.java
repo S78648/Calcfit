@@ -1,5 +1,6 @@
 package com.calorie.management.controller;
 
+import com.calorie.management.dto.UserDashboardResponse;
 import com.calorie.management.dto.UserProfileRequest;
 import com.calorie.management.dto.UserProfileResponse;
 import com.calorie.management.auth.service.CustomUserDetails;
@@ -22,12 +23,12 @@ public class UserProfileController {
     // CREATE / MULTI-STEP UPDATE
     // ==============================
     @PostMapping
-    public ResponseEntity<UserProfileResponse> createOrUpdateProfile(
+    public ResponseEntity<UserDashboardResponse> createOrUpdateProfile(
             @Valid  @RequestBody UserProfileRequest request,
             @AuthenticationPrincipal CustomUserDetails principal
     ) {
 
-        UserProfileResponse response =
+        UserDashboardResponse response =
                 userProfileService.saveProfile(principal.getUser().getId(), request);
 
         return ResponseEntity.ok(response);
@@ -37,12 +38,12 @@ public class UserProfileController {
     // UPDATE (STRICT)
     // ==============================
     @PutMapping
-    public ResponseEntity<UserProfileResponse> updateProfile(
+    public ResponseEntity<UserDashboardResponse> updateProfile(
             @Valid @RequestBody UserProfileRequest request,
             @AuthenticationPrincipal CustomUserDetails principal
     ) {
 
-        UserProfileResponse response =
+        UserDashboardResponse response =
                 userProfileService.updateProfile(principal.getUser().getId(), request);
 
         return ResponseEntity.ok(response);
@@ -52,11 +53,11 @@ public class UserProfileController {
     // GET PROFILE
     // ==============================
     @GetMapping
-    public ResponseEntity<UserProfileResponse> getProfile(
+    public ResponseEntity<UserDashboardResponse> getProfile(
             @AuthenticationPrincipal CustomUserDetails principal
     ) {
 
-        UserProfileResponse response =
+        UserDashboardResponse response =
                 userProfileService.getProfile(principal.getUser().getId());
 
         return ResponseEntity.ok(response);

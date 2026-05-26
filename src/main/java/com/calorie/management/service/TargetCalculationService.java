@@ -2,18 +2,18 @@ package com.calorie.management.service;
 
 import com.calorie.management.entity.UserProfile;
 import com.calorie.management.entity.UserTarget;
+import com.calorie.management.enums.Gender;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 
 @Service
 public class TargetCalculationService {
 
-    public UserTarget calculate(UserProfile profile) {
-
-        BigDecimal calories = calculateCalories(profile);
-
+    public UserTarget calculate(UserProfile profile,UserTarget target) {
+        BigDecimal calories = calculateCalories(profile,target);
         BigDecimal protein = calculateProtein(profile);
         BigDecimal fat = calculateFat(calories);
         BigDecimal carbs = calculateCarbs(
@@ -23,8 +23,11 @@ public class TargetCalculationService {
         );
 
         BigDecimal fiber = calculateFiber(calories);
-
         BigDecimal water = calculateWater(profile);
+
+        if (target.getCalculatedAt() == null) {
+            target.setCalculatedAt(LocalDateTime.now());
+        }
 
         return UserTarget.builder()
                 .userId(profile.getUserId())
@@ -37,11 +40,11 @@ public class TargetCalculationService {
                 .build();
     }
 
-    private BigDecimal calculateCalories(UserProfile profile) {
+    private BigDecimal calculateCalories(UserProfile profile,UserTarget target) {
 
         double weight = profile.getWeightKg().doubleValue();
         double height = profile.getHeightCm().doubleValue();
-        double tdee = getTdee(profile, weight, height);
+        double tdee = getTdee(profile, weight, height,target);
 
         double calories = switch (profile.getGoalType()) {
             case "WEIGHT_LOSS" -> tdee - 500;
@@ -55,12 +58,12 @@ public class TargetCalculationService {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
-    private static double getTdee(UserProfile profile, double weight, double height) {
+    private static double getTdee(UserProfile profile, double weight, double height,UserTarget target) {
         int age = profile.getAge();
 
         double bmr;
 
-        if ("MALE".equalsIgnoreCase(profile.getGender())) {
+        if (profile.getGender()== Gender.MALE) {
             bmr = 10 * weight + 6.25 * height - 5 * age + 5;
         } else {
             bmr = 10 * weight + 6.25 * height - 5 * age - 161;
@@ -75,6 +78,9 @@ public class TargetCalculationService {
             default -> throw new IllegalArgumentException(
                     "Invalid activity level");
         };
+
+        target.setBmr(BigDecimal.valueOf(bmr));
+        target.setTdee(BigDecimal.valueOf(bmr*activityFactor));
 
         return bmr * activityFactor;
     }

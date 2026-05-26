@@ -60,5 +60,6 @@ public class UserTarget {
     @PreUpdate
     public void onUpdate() {
         updatedAt = LocalDateTime.now();
+        calculatedAt = LocalDateTime.now();
     }
 }
