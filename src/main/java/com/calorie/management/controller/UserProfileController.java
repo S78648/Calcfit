@@ -1,10 +1,13 @@
 package com.calorie.management.controller;
 
+import com.calorie.management.dto.UserDashboardResponse;
 import com.calorie.management.dto.UserProfileRequest;
 import com.calorie.management.dto.UserProfileResponse;
-import com.calorie.management.entity.User;
+import com.calorie.management.auth.service.CustomUserDetails;
 import com.calorie.management.service.UserProfileService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -20,13 +23,13 @@ public class UserProfileController {
     // CREATE / MULTI-STEP UPDATE
     // ==============================
     @PostMapping
-    public ResponseEntity<UserProfileResponse> createOrUpdateProfile(
-            @RequestBody UserProfileRequest request,
-            @AuthenticationPrincipal User user
+    public ResponseEntity<UserDashboardResponse> createOrUpdateProfile(
+            @Valid  @RequestBody UserProfileRequest request,
+            @AuthenticationPrincipal CustomUserDetails principal
     ) {
 
-        UserProfileResponse response =
-                userProfileService.createOrUpdateProfile(user.getId(), request);
+        UserDashboardResponse response =
+                userProfileService.saveProfile(principal.getUser().getId(), request);
 
         return ResponseEntity.ok(response);
     }
@@ -35,13 +38,13 @@ public class UserProfileController {
     // UPDATE (STRICT)
     // ==============================
     @PutMapping
-    public ResponseEntity<UserProfileResponse> updateProfile(
-            @RequestBody UserProfileRequest request,
-            @AuthenticationPrincipal User user
+    public ResponseEntity<UserDashboardResponse> updateProfile(
+            @Valid @RequestBody UserProfileRequest request,
+            @AuthenticationPrincipal CustomUserDetails principal
     ) {
 
-        UserProfileResponse response =
-                userProfileService.updateProfile(user.getId(), request);
+        UserDashboardResponse response =
+                userProfileService.updateProfile(principal.getUser().getId(), request);
 
         return ResponseEntity.ok(response);
     }
@@ -50,12 +53,12 @@ public class UserProfileController {
     // GET PROFILE
     // ==============================
     @GetMapping
-    public ResponseEntity<UserProfileResponse> getProfile(
-            @AuthenticationPrincipal User user
+    public ResponseEntity<UserDashboardResponse> getProfile(
+            @AuthenticationPrincipal CustomUserDetails principal
     ) {
 
-        UserProfileResponse response =
-                userProfileService.getProfile(user.getId());
+        UserDashboardResponse response =
+                userProfileService.getProfile(principal.getUser().getId());
 
         return ResponseEntity.ok(response);
     }

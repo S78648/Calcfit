@@ -1,11 +1,17 @@
 package com.calorie.management.service;
 
-import com.calorie.management.dto.UserProfileRequest;
-import com.calorie.management.dto.UserProfileResponse;
+import com.calorie.management.dto.*;
+import com.calorie.management.entity.User;
 import com.calorie.management.entity.UserProfile;
+import com.calorie.management.entity.UserTarget;
+import com.calorie.management.enums.Gender;
+import com.calorie.management.exception.ResourceNotFoundException;
 import com.calorie.management.repository.UserProfileRepository;
+import com.calorie.management.repository.UserRepository;
+import com.calorie.management.repository.UserTargetRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -14,129 +20,212 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserProfileService {
 
+    private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
+    private final UserTargetRepository userTargetRepository;
+    private final TargetCalculationService targetCalculationService;
 
 
-    public UserProfileResponse createOrUpdateProfile(UUID userId, UserProfileRequest request) {
-        return upsertProfile(userId, request, true);
-    }
+    @Transactional
+    public UserDashboardResponse saveProfile(
+            UUID userId,
+            UserProfileRequest request) {
 
-    public UserProfileResponse updateProfile(UUID userId, UserProfileRequest request) {
-        return upsertProfile(userId, request, false);
-    }
-
-
-    private UserProfileResponse upsertProfile(UUID userId,
-                                              UserProfileRequest request,
-                                              boolean allowCreate) {
-
-        UserProfile profile = userProfileRepository.findById(userId)
+        UserProfile profile = userProfileRepository
+                .findByUserId(userId)
                 .orElseGet(() -> {
-                    if (!allowCreate) {
-                        throw new RuntimeException("Profile not found");
-                    }
-                    UserProfile newProfile = new UserProfile();
-                    newProfile.setUserId(userId);
-                    return newProfile;
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "User not found"));
+                    UserProfile p = new UserProfile();
+//                    p.setUserId(userId);
+                    p.setUser(user);
+                    return p;
                 });
 
-        // Capture state BEFORE update (for diff logic)
-        UserProfile snapshot = cloneProfile(profile);
+        applyRequest(profile, request);
+//        User user = userRepository.findById(userId).orElse(()->{});
 
-        // Apply patch
-        updateEntity(profile, request);
+        UserProfile savedProfile =
+                userProfileRepository.save(profile);
 
-        // Validate AFTER applying patch but BEFORE saving
-        validate(profile, request);
-
-        userProfileRepository.save(profile);
-
-        // Decide recalculation
-        boolean isNowComplete = isComplete(profile);
-        boolean wasComplete = isComplete(snapshot);
-
-        boolean shouldRecalculate =
-                (isNowComplete && !wasComplete) ||  // became complete
-                        hasCriticalChanges(snapshot, request); // or critical update
-
-        if (shouldRecalculate) {
-            calculateTargets(profile);
-            regenerateTodayPlan(userId);
+        if (isProfileComplete(savedProfile)) {
+            recalculateTargets(savedProfile);
         }
 
-        return toResponse(profile);
+        return buildDashboardResponse(userId);
     }
 
 
-    public UserProfileResponse getProfile(UUID userId) {
+    @Transactional
+    public UserDashboardResponse updateProfile(
+            UUID userId,
+            UserProfileRequest request) {
 
-        UserProfile profile = userProfileRepository.findByUserId(userId).orElse(null);
+        UserProfile profile =
+                userProfileRepository.findByUserId(userId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Profile not found"));
 
-        assert profile != null;
-        return toResponse(profile);
-    }
+        applyRequest(profile, request);
 
-    private UserProfile cloneProfile(UserProfile p) {
-        UserProfile clone = new UserProfile();
-        clone.setUserId(p.getUserId());
-        clone.setAge(p.getAge());
-        clone.setGender(p.getGender());
-        clone.setHeightCm(p.getHeightCm());
-        clone.setWeightKg(p.getWeightKg());
-        clone.setActivityLevel(p.getActivityLevel());
-        clone.setGoalType(p.getGoalType());
-        return clone;
-    }
+        UserProfile savedProfile =
+                userProfileRepository.save(profile);
 
-
-    private boolean hasCriticalChanges(UserProfile oldProfile,
-                                       UserProfileRequest request) {
-
-        return (request.weightKg() != null &&
-                !request.weightKg().equals(oldProfile.getWeightKg())) ||
-
-                (request.heightCm() != null &&
-                        !request.heightCm().equals(oldProfile.getHeightCm())) ||
-
-                (request.activityLevel() != null &&
-                        !request.activityLevel().equals(oldProfile.getActivityLevel())) ||
-
-                (request.goalType() != null &&
-                        !request.goalType().equals(oldProfile.getGoalType()));
-    }
-
-
-
-
-    private boolean isComplete(UserProfile p) {
-        return p.getAge() != null &&
-                p.getGender() != null &&
-                p.getHeightCm() != null &&
-                p.getWeightKg() != null &&
-                p.getActivityLevel() != null &&
-                p.getGoalType() != null;
-    }
-
-
-    private void validate(UserProfile profile, UserProfileRequest request) {
-
-        if (request.age() != null && request.age() <= 0) {
-            throw new IllegalArgumentException("Invalid age");
+        if (isProfileComplete(savedProfile)) {
+            recalculateTargets(savedProfile);
         }
 
-        if (request.heightCm() != null && request.heightCm().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Invalid height");
-        }
+        return buildDashboardResponse(userId);
+    }
 
-        if (request.weightKg() != null && request.weightKg().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Invalid weight");
-        }
+    public UserDashboardResponse getProfile(UUID userId) {
+
+        userProfileRepository.findByUserId(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Profile not found"));
+
+        return buildDashboardResponse(userId);
     }
 
 
+    private UserResponse buildUserResponse(
+            User user,
+            UserProfile profile) {
 
+        return new UserResponse(
+                user.getId(),
+                profile.getFullName(),
+                user.getEmail()
+        );
+    }
 
-    public void updateEntity(UserProfile profile, UserProfileRequest request) {
+    private UserProfileResponse buildProfileResponse(
+            UserProfile profile) {
+
+        return new UserProfileResponse(
+                profile.getUserId(),
+                profile.getAge(),
+                profile.getGender(),
+                profile.getHeightCm(),
+                profile.getWeightKg(),
+                profile.getActivityLevel(),
+                profile.getGoalType()
+        );
+    }
+
+    private UserTargetResponse buildTargetResponse(
+            UserTarget target) {
+
+        if (target == null) {
+            return null;
+        }
+
+        return new UserTargetResponse(
+                target.getTargetCalories(),
+                target.getTargetProteinGrams(),
+                target.getTargetCarbsGrams(),
+                target.getTargetFatGrams(),
+                target.getTargetFiberGrams(),
+                target.getTargetWaterMl()
+        );
+    }
+
+    private MicronutrientResponse buildMicronutrientResponse(
+            UserProfile profile) {
+
+        Integer age = profile.getAge();
+        Gender gender = profile.getGender();
+
+        if (gender == Gender.MALE) {
+
+            if (age >= 19 && age <= 50) {
+                return new MicronutrientResponse(
+                        BigDecimal.valueOf(900),   // vitaminAMcg
+                        BigDecimal.valueOf(90),    // vitaminCMg
+                        BigDecimal.valueOf(15),    // vitaminDMcg
+                        BigDecimal.valueOf(15),    // vitaminEMg
+                        BigDecimal.valueOf(1000),  // calciumMg
+                        BigDecimal.valueOf(8),     // ironMg
+                        BigDecimal.valueOf(420),   // magnesiumMg
+                        BigDecimal.valueOf(11),    // zincMg
+                        BigDecimal.valueOf(3400)   // potassiumMg
+                );
+            }
+
+        } else if (gender==Gender.FEMALE) {
+
+            if (age >= 19 && age <= 50) {
+                return new MicronutrientResponse(
+                        BigDecimal.valueOf(700),   // vitaminAMcg
+                        BigDecimal.valueOf(75),    // vitaminCMg
+                        BigDecimal.valueOf(15),    // vitaminDMcg
+                        BigDecimal.valueOf(15),    // vitaminEMg
+                        BigDecimal.valueOf(1000),  // calciumMg
+                        BigDecimal.valueOf(18),    // ironMg
+                        BigDecimal.valueOf(320),   // magnesiumMg
+                        BigDecimal.valueOf(8),     // zincMg
+                        BigDecimal.valueOf(2600)   // potassiumMg
+                );
+            }
+        }
+
+        throw new IllegalArgumentException(
+                "No micronutrient recommendation found for age="
+                        + age +
+                        ", gender=" +
+                        gender);
+    }
+
+    private UserDashboardResponse buildDashboardResponse(UUID userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
+
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Profile not found"));
+
+        UserTarget target = userTargetRepository.findById(userId)
+                .orElse(null);
+
+        MicronutrientResponse micronutrients =
+                buildMicronutrientResponse(profile);
+
+        return new UserDashboardResponse(
+                buildUserResponse(user, profile),
+                buildProfileResponse(profile),
+                buildTargetResponse(target),
+                micronutrients
+        );
+    }
+
+    private UserTarget recalculateTargets(UserProfile profile) {
+
+        UserTarget target = userTargetRepository
+                .findById(profile.getUserId())
+                .orElseGet(() -> {
+                    UserTarget t = new UserTarget();
+                    t.setUserId(profile.getUserId());
+                    return t;
+                });
+
+        targetCalculationService.calculate(profile, target);
+
+        return userTargetRepository.save(target);
+    }
+
+    private void applyRequest(
+            UserProfile profile,
+            UserProfileRequest request) {
+
+        if (request.fullName() != null) {
+            profile.setFullName(request.fullName());
+        }
 
         if (request.age() != null) {
             profile.setAge(request.age());
@@ -163,82 +252,14 @@ public class UserProfileService {
         }
     }
 
-
-    public UserProfileResponse toResponse(UserProfile profile) {
-        return new UserProfileResponse(
-                profile.getUserId(),
-                profile.getAge(),
-                profile.getGender(),
-                profile.getHeightCm(),
-                profile.getWeightKg(),
-                profile.getActivityLevel(),
-                profile.getGoalType()
-        );
+    private boolean isProfileComplete(UserProfile profile) {
+        return profile.getAge() != null
+                && profile.getGender() != null
+                && profile.getHeightCm() != null
+                && profile.getFullName() != null
+                && profile.getWeightKg() != null
+                && profile.getActivityLevel() != null
+                && profile.getGoalType() != null;
     }
-
-    private void calculateTargets(UserProfile profile) {
-
-        // Basic BMR (Mifflin-St Jeor)
-        BigDecimal weight = profile.getWeightKg();
-        BigDecimal height = profile.getHeightCm();
-        int age = profile.getAge();
-
-        double bmr;
-
-        if (profile.getGender().equalsIgnoreCase("MALE")) {
-            bmr = 10 * weight.doubleValue() +
-                    6.25 * height.doubleValue() -
-                    5 * age + 5;
-        } else {
-            bmr = 10 * weight.doubleValue() +
-                    6.25 * height.doubleValue() -
-                    5 * age - 161;
-        }
-
-        // Activity multiplier (simplified)
-        double activityFactor = switch (profile.getActivityLevel()) {
-            case "SEDENTARY" -> 1.2;
-            case "LIGHT" -> 1.375;
-            case "MODERATE" -> 1.55;
-            case "ACTIVE" -> 1.725;
-            default -> 1.2;
-        };
-
-        double tdee = bmr * activityFactor;
-
-        // Goal adjustment
-        double targetCalories = switch (profile.getGoalType()) {
-            case "WEIGHT_LOSS" -> tdee - 500;
-            case "WEIGHT_GAIN" -> tdee + 300;
-            default -> tdee;
-        };
-
-        // 👉 For now just log / store later
-        System.out.println("Target Calories: " + targetCalories);
-
-        // Later you will persist this in a "user_targets" table
-    }
-
-    private void regenerateTodayPlan(UUID userId) {
-
-        // Step 1: Clear existing plan (if any)
-        System.out.println("Deleting old diet plan for user: " + userId);
-
-        // Step 2: Create new plan (dummy logic for now)
-        System.out.println("Generating new diet plan...");
-
-        // Example (later this will be DB-driven):
-        System.out.println("Breakfast → Oats");
-        System.out.println("Lunch → Rice + Chicken");
-        System.out.println("Dinner → Salad + Paneer");
-
-        // Later:
-        // - Fetch FoodItems by category
-        // - Allocate calories per meal
-        // - Store in diet_plans table
-    }
-
-
-
 
 }
