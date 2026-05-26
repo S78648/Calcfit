@@ -26,6 +26,7 @@ public class UserProfileService {
     private final TargetCalculationService targetCalculationService;
 
 
+    @Transactional
     public UserDashboardResponse saveProfile(
             UUID userId,
             UserProfileRequest request) {
@@ -56,6 +57,8 @@ public class UserProfileService {
         return buildDashboardResponse(userId);
     }
 
+
+    @Transactional
     public UserDashboardResponse updateProfile(
             UUID userId,
             UserProfileRequest request) {
