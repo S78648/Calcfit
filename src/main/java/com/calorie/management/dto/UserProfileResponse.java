@@ -1,6 +1,8 @@
 package com.calorie.management.dto;
 
+import com.calorie.management.enums.ActivityLevel;
 import com.calorie.management.enums.Gender;
+import com.calorie.management.enums.GoalType;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -11,7 +13,7 @@ public record UserProfileResponse(
         Gender gender,
         BigDecimal heightCm,
         BigDecimal weightKg,
-        String activityLevel,
-        String goalType
+        ActivityLevel activityLevel,
+        GoalType goalType
 ) {}
 

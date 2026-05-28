@@ -1,6 +1,8 @@
 package com.calorie.management.dto;
 
+import com.calorie.management.enums.ActivityLevel;
 import com.calorie.management.enums.Gender;
+import com.calorie.management.enums.GoalType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 
@@ -15,7 +17,7 @@ public record UserProfileRequest(
         BigDecimal heightCm,
         @DecimalMin("1")
         BigDecimal weightKg,
-        String activityLevel,
-        String goalType
+        ActivityLevel activityLevel,
+        GoalType goalType
 ) {}
 

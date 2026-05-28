@@ -12,32 +12,46 @@ import java.time.LocalDateTime;
 @Service
 public class TargetCalculationService {
 
-    public UserTarget calculate(UserProfile profile,UserTarget target) {
-        BigDecimal calories = calculateCalories(profile,target);
-        BigDecimal protein = calculateProtein(profile);
-        BigDecimal fat = calculateFat(calories);
-        BigDecimal carbs = calculateCarbs(
-                calories,
-                protein,
-                fat
-        );
+    public UserTarget calculate(
+            UserProfile profile,
+            UserTarget target) {
 
-        BigDecimal fiber = calculateFiber(calories);
-        BigDecimal water = calculateWater(profile);
+        BigDecimal calories =
+                calculateCalories(profile, target);
+
+        BigDecimal protein =
+                calculateProtein(profile);
+
+        BigDecimal fat =
+                calculateFat(calories);
+
+        BigDecimal carbs =
+                calculateCarbs(
+                        calories,
+                        protein,
+                        fat
+                );
+
+        BigDecimal fiber =
+                calculateFiber(calories);
+
+        BigDecimal water =
+                calculateWater(profile);
+
+        target.setUserId(profile.getUserId());
+
+        target.setTargetCalories(calories);
+        target.setTargetProteinGrams(protein);
+        target.setTargetFatGrams(fat);
+        target.setTargetCarbsGrams(carbs);
+        target.setTargetFiberGrams(fiber);
+        target.setTargetWaterMl(water);
 
         if (target.getCalculatedAt() == null) {
             target.setCalculatedAt(LocalDateTime.now());
         }
 
-        return UserTarget.builder()
-                .userId(profile.getUserId())
-                .targetCalories(calories)
-                .targetProteinGrams(protein)
-                .targetFatGrams(fat)
-                .targetCarbsGrams(carbs)
-                .targetFiberGrams(fiber)
-                .targetWaterMl(water)
-                .build();
+        return target;
     }
 
     private BigDecimal calculateCalories(UserProfile profile,UserTarget target) {
@@ -46,13 +60,7 @@ public class TargetCalculationService {
         double height = profile.getHeightCm().doubleValue();
         double tdee = getTdee(profile, weight, height,target);
 
-        double calories = switch (profile.getGoalType()) {
-            case "WEIGHT_LOSS" -> tdee - 500;
-            case "WEIGHT_GAIN" -> tdee + 300;
-            case "MAINTENANCE" -> tdee;
-            default -> throw new IllegalArgumentException(
-                    "Invalid goal type");
-        };
+        double calories = tdee + profile.getGoalType().getCalorieAdjustment();
 
         return BigDecimal.valueOf(calories)
                 .setScale(2, RoundingMode.HALF_UP);
@@ -60,7 +68,6 @@ public class TargetCalculationService {
 
     private static double getTdee(UserProfile profile, double weight, double height,UserTarget target) {
         int age = profile.getAge();
-
         double bmr;
 
         if (profile.getGender()== Gender.MALE) {
@@ -68,48 +75,27 @@ public class TargetCalculationService {
         } else {
             bmr = 10 * weight + 6.25 * height - 5 * age - 161;
         }
-
-        double activityFactor = switch (profile.getActivityLevel()) {
-            case "SEDENTARY" -> 1.2;
-            case "LIGHT" -> 1.375;
-            case "MODERATE" -> 1.55;
-            case "ACTIVE" -> 1.725;
-            case "VERY_ACTIVE" -> 1.9;
-            default -> throw new IllegalArgumentException(
-                    "Invalid activity level");
-        };
+         double tdee = bmr * profile.getActivityLevel().getFactor();
 
         target.setBmr(BigDecimal.valueOf(bmr));
-        target.setTdee(BigDecimal.valueOf(bmr*activityFactor));
+        target.setTdee(BigDecimal.valueOf(tdee));
 
-        return bmr * activityFactor;
+        return tdee;
     }
 
     private BigDecimal calculateProtein(UserProfile profile) {
-
         BigDecimal weight = profile.getWeightKg();
-
-        BigDecimal multiplier = switch (profile.getGoalType()) {
-
-            case "WEIGHT_LOSS" ->
-                    BigDecimal.valueOf(2.2);
-
-            case "WEIGHT_GAIN" ->
-                    BigDecimal.valueOf(2.0);
-
-            default ->
-                    BigDecimal.valueOf(1.8);
-        };
+        BigDecimal multiplier =
+                profile.getGoalType()
+                        .getProteinMultiplier();
 
         return weight.multiply(multiplier)
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal calculateFat(BigDecimal calories) {
-
         BigDecimal fatCalories =
                 calories.multiply(BigDecimal.valueOf(0.25));
-
         return fatCalories
                 .divide(BigDecimal.valueOf(9),
                         2,
