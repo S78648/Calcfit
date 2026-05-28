@@ -1,6 +1,8 @@
 package com.calorie.management.entity;
 
+import com.calorie.management.enums.ActivityLevel;
 import com.calorie.management.enums.Gender;
+import com.calorie.management.enums.GoalType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -40,8 +42,10 @@ public class UserProfile {
 
     private BigDecimal weightKg;
 
-    private String activityLevel;
+    @Enumerated(EnumType.STRING)
+    private ActivityLevel activityLevel;
 
-    private String goalType;
+    @Enumerated(EnumType.STRING)
+    private GoalType goalType;
 }
 
