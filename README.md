@@ -100,3 +100,72 @@ Typical flow:
   - Ensure `dev` profile is active (or `prod` env vars are set)
   - Confirm the JDBC URL/credentials are correct
 
+## Swagger API Documentation
+
+This project uses Swagger/OpenAPI for interactive API documentation and testing.
+
+### Swagger UI
+
+After running the application, open:
+
+```text
+http://localhost:8060/swagger-ui/index.html
+```
+
+### OpenAPI Docs
+
+```text
+http://localhost:8060/v3/api-docs
+```
+
+---
+
+## JWT Authentication in Swagger
+
+Protected APIs require JWT authentication.
+
+### Steps
+
+1. Login using:
+
+```http
+POST /auth/login
+```
+
+2. Copy the JWT token from the response.
+
+3. Click the **Authorize** button in Swagger UI.
+
+4. Enter the token in this format:
+
+```text
+Bearer your-jwt-token
+```
+
+5. You can now access secured endpoints directly from Swagger UI.
+
+---
+
+## Features
+
+* Interactive API documentation
+* JWT authentication support
+* Request/response schema visualization
+* Secure endpoint testing
+* OpenAPI 3 integration
+
+---
+
+## Security Notes
+
+The following endpoints are publicly accessible:
+
+```text
+/auth/**
+/swagger-ui/**
+/v3/api-docs/**
+```
+
+All other endpoints require authentication.
+
+
