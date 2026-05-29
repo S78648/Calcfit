@@ -4,7 +4,9 @@ import com.calorie.management.exception.ApiError;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
@@ -13,7 +15,10 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 
 @Component
+@RequiredArgsConstructor
 public class JwtAccessDeniedHandler implements AccessDeniedHandler {
+
+    private final ObjectMapper objectMapper;
 
     @Override
     public void handle(
@@ -21,6 +26,8 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
             HttpServletResponse response,
             AccessDeniedException ex)
             throws IOException {
+
+
 
         ApiError error = new ApiError(
                 HttpStatus.FORBIDDEN.value(),
@@ -30,11 +37,10 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
                 LocalDateTime.now()
         );
 
-        response.setStatus(HttpStatus.FORBIDDEN.value());
-        response.setContentType("application/json");
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        ObjectMapper mapper = new ObjectMapper();
-        response.getWriter().write(mapper.writeValueAsString(error));
+        response.getWriter().write(objectMapper.writeValueAsString(error));
     }
 }
 
