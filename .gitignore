@@ -1,5 +1,7 @@
 # Gradle
 .gradle/
+
+# Build output
 build/
 
 # Maven (if ever used)
@@ -16,6 +18,7 @@ out/
 # Logs
 logs/
 *.log
+
 
 # Environment files
 .env
