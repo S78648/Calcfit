@@ -168,4 +168,107 @@ The following endpoints are publicly accessible:
 
 All other endpoints require authentication.
 
+## Testing
+
+This project uses **JUnit 5** and **Mockito** for unit testing.
+
+### Testing Strategy
+
+The application follows two types of unit testing:
+
+#### 1. JUnit Tests
+
+Used for testing pure business logic that has no external dependencies.
+
+Examples:
+
+* Calorie calculations
+* Protein calculations
+* Macronutrient calculations
+* Utility methods
+* Validation logic
+
+Example:
+
+```java
+//assertEquals(
+//    BigDecimal.valueOf(130.00).setScale(2),
+//    target.getTargetProteinGrams()
+//);
+```
+
+---
+
+#### 2. Mockito Tests
+
+Used when a service depends on:
+
+* Repositories
+* External APIs
+* Redis
+* Email services
+* Other Spring services
+
+Mockito allows testing business logic without requiring a real database.
+
+Example:
+
+```java
+//when(userRepository.findById(userId))
+//        .thenReturn(Optional.of(user));
+```
+
+This tells Mockito:
+
+> When the service calls `userRepository.findById()`, return the provided user.
+
+---
+
+### Current Test Coverage
+
+#### TargetCalculationService
+
+* Calorie calculation
+* Protein calculation
+* Fat calculation
+* Carbohydrate calculation
+* Water intake calculation
+* Fiber calculation
+
+#### UserProfileService
+
+* Create new profile
+* Update existing profile
+* Get user dashboard
+* Recalculate targets
+* Resource not found scenarios
+
+---
+
+### Running Tests
+
+Run all tests:
+
+```bash
+./gradlew test
+```
+
+Run a specific test class:
+
+```bash
+./gradlew test --tests "com.calorie.management.TargetCalculationServiceTest"
+```
+
+---
+
+### Learning Notes
+
+A useful rule:
+
+* Use **JUnit** when testing pure logic.
+* Use **Mockito** when testing code that depends on repositories or external services.
+
+Mockito does not access the database. It only simulates responses, making tests fast, isolated, and deterministic.
+
+
 

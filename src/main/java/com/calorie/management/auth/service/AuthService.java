@@ -54,14 +54,14 @@ public class AuthService {
         refreshTokenService.storeToken(
                 refreshToken,
                 user,
-                jwtProperties.getRefreshExpiration()
+                jwtProperties.getRefreshTokenTtlSeconds()
         );
 
         return new TokenResponse(
                 accessToken,
                 refreshToken,
                 "Bearer",
-                jwtProperties.getExpiration()
+                jwtProperties.getAccessTokenTtlSeconds()
         );
     }
 
@@ -93,11 +93,11 @@ public class AuthService {
                 newAccessToken,
                 request.refreshToken(),
                 "Bearer",
-                jwtProperties.getExpiration()
+                jwtProperties.getAccessTokenTtlSeconds()
         );
     }
 
-    @PostMapping("/logout")
+
     public void logout(@RequestBody RefreshRequest request) {
         refreshTokenService.revoke(request.refreshToken());
     }
