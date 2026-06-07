@@ -270,5 +270,85 @@ A useful rule:
 
 Mockito does not access the database. It only simulates responses, making tests fast, isolated, and deterministic.
 
+Docker Setup
+Prerequisites
 
+Install:
+
+Docker Desktop
+Git
+Java 21 (for local development)
+
+Verify Docker installation:
+
+docker --version
+docker compose version
+Build and Run Application
+Start Application
+docker compose up --build
+
+Run in background:
+
+docker compose up --build -d
+Stop Containers
+docker compose down
+Rebuild After Code Changes
+docker compose down
+docker compose up --build -d
+Force Clean Rebuild
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+View Running Containers
+docker ps
+
+Example:
+
+CONTAINER ID   IMAGE
+abc123         calorie_management-app
+xyz456         postgres:16-alpine
+View Application Logs
+docker logs -f calorie_management-app-1
+Access PostgreSQL Container
+
+Find container name:
+
+docker ps
+
+Example:
+
+calorie_management-db-1
+
+Connect:
+
+docker exec -it calorie_management-db-1 psql -U postgres -d calorie_db
+
+Useful commands:
+
+\dt
+SELECT * FROM users;
+SELECT * FROM user_profiles;
+
+Exit:
+
+\q
+Environment Variables
+
+Application uses environment variables in production:
+
+JWT_ISSUER=calcfit
+JWT_SECRET=<your-secret>
+JWT_ACCESS_TTL_SECONDS=3600
+JWT_REFRESH_TTL_SECONDS=604800
+Docker Architecture
+┌─────────────────────────┐
+│ Spring Boot Application │
+│ Port 8060              │
+└──────────┬──────────────┘
+│
+▼
+┌─────────────────────────┐
+│ PostgreSQL Database     │
+│ Port 5432              │
+└─────────────────────────┘
 
