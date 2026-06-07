@@ -1,0 +1,39 @@
+# Gradle
+.gradle/
+build/
+
+# Maven (if ever used)
+target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+# VS Code
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Java
+*.class
+
+# Spring Boot
+application-local.yml
+
+# Docker volumes (if stored locally)
+postgres_data/
+
+# Generated files
+*.jar
+*.war

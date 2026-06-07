@@ -168,4 +168,187 @@ The following endpoints are publicly accessible:
 
 All other endpoints require authentication.
 
+## Testing
+
+This project uses **JUnit 5** and **Mockito** for unit testing.
+
+### Testing Strategy
+
+The application follows two types of unit testing:
+
+#### 1. JUnit Tests
+
+Used for testing pure business logic that has no external dependencies.
+
+Examples:
+
+* Calorie calculations
+* Protein calculations
+* Macronutrient calculations
+* Utility methods
+* Validation logic
+
+Example:
+
+```java
+//assertEquals(
+//    BigDecimal.valueOf(130.00).setScale(2),
+//    target.getTargetProteinGrams()
+//);
+```
+
+---
+
+#### 2. Mockito Tests
+
+Used when a service depends on:
+
+* Repositories
+* External APIs
+* Redis
+* Email services
+* Other Spring services
+
+Mockito allows testing business logic without requiring a real database.
+
+Example:
+
+```java
+//when(userRepository.findById(userId))
+//        .thenReturn(Optional.of(user));
+```
+
+This tells Mockito:
+
+> When the service calls `userRepository.findById()`, return the provided user.
+
+---
+
+### Current Test Coverage
+
+#### TargetCalculationService
+
+* Calorie calculation
+* Protein calculation
+* Fat calculation
+* Carbohydrate calculation
+* Water intake calculation
+* Fiber calculation
+
+#### UserProfileService
+
+* Create new profile
+* Update existing profile
+* Get user dashboard
+* Recalculate targets
+* Resource not found scenarios
+
+---
+
+### Running Tests
+
+Run all tests:
+
+```bash
+./gradlew test
+```
+
+Run a specific test class:
+
+```bash
+./gradlew test --tests "com.calorie.management.TargetCalculationServiceTest"
+```
+
+---
+
+### Learning Notes
+
+A useful rule:
+
+* Use **JUnit** when testing pure logic.
+* Use **Mockito** when testing code that depends on repositories or external services.
+
+Mockito does not access the database. It only simulates responses, making tests fast, isolated, and deterministic.
+
+Docker Setup
+Prerequisites
+
+Install:
+
+Docker Desktop
+Git
+Java 21 (for local development)
+
+Verify Docker installation:
+
+docker --version
+docker compose version
+Build and Run Application
+Start Application
+docker compose up --build
+
+Run in background:
+
+docker compose up --build -d
+Stop Containers
+docker compose down
+Rebuild After Code Changes
+docker compose down
+docker compose up --build -d
+Force Clean Rebuild
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+View Running Containers
+docker ps
+
+Example:
+
+CONTAINER ID   IMAGE
+abc123         calorie_management-app
+xyz456         postgres:16-alpine
+View Application Logs
+docker logs -f calorie_management-app-1
+Access PostgreSQL Container
+
+Find container name:
+
+docker ps
+
+Example:
+
+calorie_management-db-1
+
+Connect:
+
+docker exec -it calorie_management-db-1 psql -U postgres -d calorie_db
+
+Useful commands:
+
+\dt
+SELECT * FROM users;
+SELECT * FROM user_profiles;
+
+Exit:
+
+\q
+Environment Variables
+
+Application uses environment variables in production:
+
+JWT_ISSUER=calcfit
+JWT_SECRET=<your-secret>
+JWT_ACCESS_TTL_SECONDS=3600
+JWT_REFRESH_TTL_SECONDS=604800
+Docker Architecture
+┌─────────────────────────┐
+│ Spring Boot Application │
+│ Port 8060              │
+└──────────┬──────────────┘
+│
+▼
+┌─────────────────────────┐
+│ PostgreSQL Database     │
+│ Port 5432              │
+└─────────────────────────┘
 

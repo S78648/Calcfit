@@ -4,6 +4,7 @@ import com.calorie.management.security.properties.JwtProperties;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -30,8 +31,11 @@ public class JwtService {
                 .setSubject(email)
                 .setIssuedAt(new Date())
                 .setExpiration(
-                        new Date(System.currentTimeMillis()
-                                + properties.getExpiration()))
+                        Date.from(
+                                Instant.now()
+                                        .plusSeconds(properties.getAccessTokenTtlSeconds())
+                        )
+                )
                 .signWith(getSigningKey(),
                         SignatureAlgorithm.HS256)
                 .compact();
@@ -44,8 +48,11 @@ public class JwtService {
                 .setId(UUID.randomUUID().toString())
                 .setIssuedAt(new Date())
                 .setExpiration(
-                        new Date(System.currentTimeMillis()
-                                + properties.getRefreshExpiration()))
+                        Date.from(
+                                Instant.now()
+                                        .plusSeconds(properties.getRefreshTokenTtlSeconds())
+                        )
+                )
                 .claim("type", "refresh")
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
