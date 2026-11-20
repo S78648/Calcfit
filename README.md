@@ -345,8 +345,8 @@ Docker Architecture
 │ Spring Boot Application │
 │ Port 8060              │
 └──────────┬──────────────┘
-│
-▼
+           │
+           ▼
 ┌─────────────────────────┐
 │ PostgreSQL Database     │
 │ Port 5432              │
