@@ -5,6 +5,7 @@ import com.calorie.management.entity.User;
 import com.calorie.management.entity.UserProfile;
 import com.calorie.management.entity.UserTarget;
 import com.calorie.management.enums.Gender;
+import com.calorie.management.exception.InvalidRequestException;
 import com.calorie.management.exception.ResourceNotFoundException;
 import com.calorie.management.repository.UserProfileRepository;
 import com.calorie.management.repository.UserRepository;
@@ -45,7 +46,11 @@ public class UserProfileService {
                 });
 
         applyRequest(profile, request);
-//        User user = userRepository.findById(userId).orElse(()->{});
+
+        // user_profiles.gender is NOT NULL: fail with 400 instead of a DB constraint 500.
+        if (profile.getGender() == null) {
+            throw new InvalidRequestException("gender is required when creating a profile");
+        }
 
         UserProfile savedProfile =
                 userProfileRepository.save(profile);
@@ -109,6 +114,7 @@ public class UserProfileService {
 
         return new UserProfileResponse(
                 profile.getUserId(),
+                profile.getFullName(),
                 profile.getAge(),
                 profile.getGender(),
                 profile.getHeightCm(),
@@ -250,7 +256,7 @@ public class UserProfileService {
             UserProfileRequest request) {
 
         if (request.fullName() != null) {
-            profile.setFullName(request.fullName());
+            profile.setFullName(request.fullName().trim());
         }
 
         if (request.age() != null) {
