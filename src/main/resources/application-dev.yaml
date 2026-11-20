@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/calorie_db
-    username: postgres
-    password: Sumit8077315043
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/calorie_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
 
   jpa:
     show-sql: false
