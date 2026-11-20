@@ -207,7 +207,7 @@ class TargetCalculationServiceTest {
         );
 
         assertEquals(
-                300,
+                500,
                 GoalType.WEIGHT_GAIN.getCalorieAdjustment()
         );
 

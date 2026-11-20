@@ -5,6 +5,7 @@ import com.calorie.management.entity.User;
 import com.calorie.management.entity.UserProfile;
 import com.calorie.management.entity.UserTarget;
 import com.calorie.management.enums.Gender;
+import com.calorie.management.exception.InvalidRequestException;
 import com.calorie.management.exception.ResourceNotFoundException;
 import com.calorie.management.repository.UserProfileRepository;
 import com.calorie.management.repository.UserRepository;
@@ -45,7 +46,11 @@ public class UserProfileService {
                 });
 
         applyRequest(profile, request);
-//        User user = userRepository.findById(userId).orElse(()->{});
+
+        // user_profiles.gender is NOT NULL: fail with 400 instead of a DB constraint 500.
+        if (profile.getGender() == null) {
+            throw new InvalidRequestException("gender is required when creating a profile");
+        }
 
         UserProfile savedProfile =
                 userProfileRepository.save(profile);
@@ -81,6 +86,7 @@ public class UserProfileService {
         return buildDashboardResponse(userId);
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public UserDashboardResponse getProfile(UUID userId) {
 
         userProfileRepository.findByUserId(userId)
@@ -108,6 +114,7 @@ public class UserProfileService {
 
         return new UserProfileResponse(
                 profile.getUserId(),
+                profile.getFullName(),
                 profile.getAge(),
                 profile.getGender(),
                 profile.getHeightCm(),
@@ -140,44 +147,69 @@ public class UserProfileService {
         Integer age = profile.getAge();
         Gender gender = profile.getGender();
 
-        if (gender == Gender.MALE) {
-
-            if (age >= 19 && age <= 50) {
-                return new MicronutrientResponse(
-                        BigDecimal.valueOf(900),   // vitaminAMcg
-                        BigDecimal.valueOf(90),    // vitaminCMg
-                        BigDecimal.valueOf(15),    // vitaminDMcg
-                        BigDecimal.valueOf(15),    // vitaminEMg
-                        BigDecimal.valueOf(1000),  // calciumMg
-                        BigDecimal.valueOf(8),     // ironMg
-                        BigDecimal.valueOf(420),   // magnesiumMg
-                        BigDecimal.valueOf(11),    // zincMg
-                        BigDecimal.valueOf(3400)   // potassiumMg
-                );
-            }
-
-        } else if (gender==Gender.FEMALE) {
-
-            if (age >= 19 && age <= 50) {
-                return new MicronutrientResponse(
-                        BigDecimal.valueOf(700),   // vitaminAMcg
-                        BigDecimal.valueOf(75),    // vitaminCMg
-                        BigDecimal.valueOf(15),    // vitaminDMcg
-                        BigDecimal.valueOf(15),    // vitaminEMg
-                        BigDecimal.valueOf(1000),  // calciumMg
-                        BigDecimal.valueOf(18),    // ironMg
-                        BigDecimal.valueOf(320),   // magnesiumMg
-                        BigDecimal.valueOf(8),     // zincMg
-                        BigDecimal.valueOf(2600)   // potassiumMg
-                );
-            }
+        if (gender == Gender.MALE && age != null && age >= 19 && age <= 50) {
+            return new MicronutrientResponse(
+                    BigDecimal.valueOf(900),
+                    BigDecimal.valueOf(90),
+                    BigDecimal.valueOf(15),
+                    BigDecimal.valueOf(15),
+                    BigDecimal.valueOf(1000),
+                    BigDecimal.valueOf(8),
+                    BigDecimal.valueOf(420),
+                    BigDecimal.valueOf(11),
+                    BigDecimal.valueOf(3400)
+            );
+        } else if (gender == Gender.FEMALE && age != null && age >= 19 && age <= 50) {
+            return new MicronutrientResponse(
+                    BigDecimal.valueOf(700),
+                    BigDecimal.valueOf(75),
+                    BigDecimal.valueOf(15),
+                    BigDecimal.valueOf(15),
+                    BigDecimal.valueOf(1000),
+                    BigDecimal.valueOf(18),
+                    BigDecimal.valueOf(320),
+                    BigDecimal.valueOf(8),
+                    BigDecimal.valueOf(2600)
+            );
         }
 
-        throw new IllegalArgumentException(
-                "No micronutrient recommendation found for age="
-                        + age +
-                        ", gender=" +
-                        gender);
+        if (gender == Gender.MALE) {
+            return new MicronutrientResponse(
+                    BigDecimal.valueOf(900),
+                    BigDecimal.valueOf(90),
+                    BigDecimal.valueOf(15),
+                    BigDecimal.valueOf(15),
+                    BigDecimal.valueOf(1000),
+                    BigDecimal.valueOf(8),
+                    BigDecimal.valueOf(420),
+                    BigDecimal.valueOf(11),
+                    BigDecimal.valueOf(3400)
+            );
+        } else if (gender == Gender.FEMALE) {
+            return new MicronutrientResponse(
+                    BigDecimal.valueOf(700),
+                    BigDecimal.valueOf(75),
+                    BigDecimal.valueOf(15),
+                    BigDecimal.valueOf(15),
+                    BigDecimal.valueOf(1000),
+                    BigDecimal.valueOf(18),
+                    BigDecimal.valueOf(320),
+                    BigDecimal.valueOf(8),
+                    BigDecimal.valueOf(2600)
+            );
+        }
+
+        return new MicronutrientResponse(
+                BigDecimal.valueOf(800),
+                BigDecimal.valueOf(82),
+                BigDecimal.valueOf(15),
+                BigDecimal.valueOf(15),
+                BigDecimal.valueOf(1000),
+                BigDecimal.valueOf(12),
+                BigDecimal.valueOf(370),
+                BigDecimal.valueOf(9),
+                BigDecimal.valueOf(3000)
+        );
     }
 
     private UserDashboardResponse buildDashboardResponse(UUID userId) {
@@ -224,7 +256,7 @@ public class UserProfileService {
             UserProfileRequest request) {
 
         if (request.fullName() != null) {
-            profile.setFullName(request.fullName());
+            profile.setFullName(request.fullName().trim());
         }
 
         if (request.age() != null) {

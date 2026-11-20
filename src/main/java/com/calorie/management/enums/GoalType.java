@@ -21,7 +21,7 @@ public enum GoalType {
 
     WEIGHT_GAIN(
             BigDecimal.valueOf(2.0),
-            300
+            500
     );
 
     private final BigDecimal proteinMultiplier;

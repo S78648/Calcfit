@@ -37,7 +37,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
                 LocalDateTime.now()
         );
 
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
         response.getWriter().write(objectMapper.writeValueAsString(error));

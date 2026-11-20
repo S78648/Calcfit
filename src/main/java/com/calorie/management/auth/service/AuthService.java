@@ -1,27 +1,24 @@
 package com.calorie.management.auth.service;
 
-
 import com.calorie.management.auth.dto.LoginRequest;
 import com.calorie.management.auth.dto.RefreshRequest;
+import com.calorie.management.auth.dto.SignUpRequest;
 import com.calorie.management.auth.dto.SignUpResponse;
 import com.calorie.management.auth.dto.TokenResponse;
-import com.calorie.management.auth.refresh.RefreshTokenService;
 import com.calorie.management.auth.refresh.RefreshToken;
+import com.calorie.management.auth.refresh.RefreshTokenService;
 import com.calorie.management.entity.User;
-import com.calorie.management.entity.UserProfile;
-import com.calorie.management.repository.UserProfileRepository;
+import com.calorie.management.exception.ConflictException;
 import com.calorie.management.repository.UserRepository;
 import com.calorie.management.security.properties.JwtProperties;
-import jakarta.transaction.Transactional;
+import com.calorie.management.security.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import com.calorie.management.security.service.JwtService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -33,43 +30,23 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final JwtProperties jwtProperties;
-    private final UserProfileRepository userProfileRepository;
 
+    @Transactional
     public TokenResponse login(LoginRequest request) {
-
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                )
+                new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
 
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new BadCredentialsException("Bad credentials"));
 
-        String accessToken = jwtService.generateAccessToken(user.getEmail());
-
-        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
-
-        refreshTokenService.storeToken(
-                refreshToken,
-                user,
-                jwtProperties.getRefreshTokenTtlSeconds()
-        );
-
-        return new TokenResponse(
-                accessToken,
-                refreshToken,
-                "Bearer",
-                jwtProperties.getAccessTokenTtlSeconds()
-        );
+        return issueTokens(user);
     }
 
-
     @Transactional
-    public SignUpResponse signup(LoginRequest request) {
+    public SignUpResponse signup(SignUpRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("Username already exists");
+            throw new ConflictException("An account with this email already exists");
         }
         User savedUser = userRepository.save(User.builder()
                 .email(request.email())
@@ -79,30 +56,30 @@ public class AuthService {
         return new SignUpResponse(savedUser.getId(), savedUser.getEmail());
     }
 
+    /** Refresh-token rotation: revoke the presented token and issue a fresh pair. */
+    @Transactional
     public TokenResponse refresh(RefreshRequest request) {
+        RefreshToken token = refreshTokenService.validate(request.refreshToken());
+        refreshTokenService.revoke(token);
+        return issueTokens(token.getUser());
+    }
 
-        RefreshToken token =
-                refreshTokenService.validate(request.refreshToken());
+    @Transactional
+    public void logout(RefreshRequest request) {
+        refreshTokenService.revokeIfPresent(request.refreshToken());
+    }
 
-        String email = token.getUser().getEmail();
+    private TokenResponse issueTokens(User user) {
+        String accessToken = jwtService.generateAccessToken(user.getEmail());
+        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
 
-        String newAccessToken =
-                jwtService.generateAccessToken(email);
+        refreshTokenService.storeToken(refreshToken, user, jwtProperties.getRefreshTokenTtlSeconds());
 
         return new TokenResponse(
-                newAccessToken,
-                request.refreshToken(),
+                accessToken,
+                refreshToken,
                 "Bearer",
                 jwtProperties.getAccessTokenTtlSeconds()
         );
     }
-
-
-    public void logout(@RequestBody RefreshRequest request) {
-        refreshTokenService.revoke(request.refreshToken());
-    }
-
-
-
 }
-

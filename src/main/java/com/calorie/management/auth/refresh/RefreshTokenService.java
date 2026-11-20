@@ -1,12 +1,10 @@
 package com.calorie.management.auth.refresh;
 
-
-
+import com.calorie.management.entity.User;
+import com.calorie.management.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.stereotype.Service;
-
-import com.calorie.management.entity.User;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -17,16 +15,15 @@ public class RefreshTokenService {
 
     private final RefreshTokenRepository repository;
 
-    public void storeToken(String refreshToken, User user, long expirationMillis) {
-
-        String hash = hashToken(refreshToken);
-
+    /** Stores only a SHA-256 hash of the token. TTL is in SECONDS. */
+    public void storeToken(String refreshToken, User user, long ttlSeconds) {
+        LocalDateTime now = LocalDateTime.now();
         RefreshToken token = RefreshToken.builder()
-                .tokenHash(hash)
+                .tokenHash(hashToken(refreshToken))
                 .user(user)
                 .revoked(false)
-                .createdAt(LocalDateTime.now())
-                .expiresAt(LocalDateTime.now().plusSeconds(expirationMillis / 1000))
+                .createdAt(now)
+                .expiresAt(now.plusSeconds(ttlSeconds))
                 .build();
 
         repository.save(token);
@@ -34,39 +31,32 @@ public class RefreshTokenService {
 
     @Transactional
     public RefreshToken validate(String refreshToken) {
-
-        String hash = hashToken(refreshToken);
-
-        RefreshToken token = repository.findByTokenHash(hash)
-                .orElseThrow(() ->
-                        new RuntimeException("Refresh token not found"));
+        RefreshToken token = repository.findByTokenHash(hashToken(refreshToken))
+                .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
 
         if (token.isRevoked()) {
-            throw new RuntimeException("Refresh token revoked");
+            throw new UnauthorizedException("Refresh token revoked");
         }
-
         if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Refresh token expired");
+            throw new UnauthorizedException("Refresh token expired");
         }
-
         return token;
     }
 
-    public void revoke(String refreshToken) {
-
-        String hash = hashToken(refreshToken);
-
-        RefreshToken token = repository.findByTokenHash(hash)
-                .orElseThrow(() ->
-                        new RuntimeException("Token not found"));
-
+    public void revoke(RefreshToken token) {
         token.setRevoked(true);
-
         repository.save(token);
+    }
+
+    /** Logout must be idempotent: unknown tokens are ignored. */
+    @Transactional
+    public void revokeIfPresent(String refreshToken) {
+        repository.findByTokenHash(hashToken(refreshToken))
+                .filter(t -> !t.isRevoked())
+                .ifPresent(this::revoke);
     }
 
     private String hashToken(String token) {
         return DigestUtils.sha256Hex(token);
     }
 }
-

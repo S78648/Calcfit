@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public record UserProfileResponse(
         UUID userId,
+        String fullName,
         Integer age,
         Gender gender,
         BigDecimal heightCm,
@@ -16,4 +17,3 @@ public record UserProfileResponse(
         ActivityLevel activityLevel,
         GoalType goalType
 ) {}
-
