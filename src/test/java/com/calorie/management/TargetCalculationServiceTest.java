@@ -238,4 +238,54 @@ class TargetCalculationServiceTest {
                 GoalType.MAINTENANCE.getCalorieAdjustment()
         );
     }
+
+    private UserProfile paceProfile(Gender g, double weight, GoalType goal, Double pace) {
+        return UserProfile.builder()
+                .age(30).gender(g)
+                .heightCm(BigDecimal.valueOf(170)).weightKg(BigDecimal.valueOf(weight))
+                .activityLevel(ActivityLevel.SEDENTARY).goalType(goal)
+                .weeklyPaceKg(pace == null ? null : BigDecimal.valueOf(pace))
+                .build();
+    }
+
+    @Test
+    void weeklyPaceDrivesTheDailyAdjustment() {
+        // male 30y 170cm 70kg sedentary: BMR 1617.5, TDEE 1941.0
+        UserTarget loss = targetCalculationService.calculate(paceProfile(Gender.MALE, 70, GoalType.WEIGHT_LOSS, 0.5), UserTarget.builder().build());
+        // 1941 - 550 = 1391, below the floor max(BMR 1617.5, 1500) -> 1617.5
+        assertEquals(0, BigDecimal.valueOf(1617.50).compareTo(loss.getTargetCalories()));
+
+        UserTarget gain = targetCalculationService.calculate(paceProfile(Gender.MALE, 70, GoalType.WEIGHT_GAIN, 0.25), UserTarget.builder().build());
+        assertEquals(0, BigDecimal.valueOf(2216.00).compareTo(gain.getTargetCalories())); // 1941 + 275
+    }
+
+    @Test
+    void lossAboveTheFloorUsesThePaceFormula() {
+        // male 30y 170cm 100kg moderate: BMR 1917.5, TDEE 2972.125; -0.5 kg/wk -> 2972.125 - 550 = 2422.125
+        UserProfile p = paceProfile(Gender.MALE, 100, GoalType.WEIGHT_LOSS, 0.5);
+        p.setActivityLevel(ActivityLevel.MODERATE);
+        assertEquals(0, BigDecimal.valueOf(2422.13).compareTo(targetCalculationService.calculate(p, UserTarget.builder().build()).getTargetCalories()));
+    }
+
+    @Test
+    void deficitNeverGoesBelowBmr() {
+        // male 30y 170cm 100kg sedentary: TDEE 2301 - 550 = 1751 < BMR 1917.5 -> 1917.5
+        UserProfile p = paceProfile(Gender.MALE, 100, GoalType.WEIGHT_LOSS, 0.5);
+        assertEquals(0, BigDecimal.valueOf(1917.50).compareTo(targetCalculationService.calculate(p, UserTarget.builder().build()).getTargetCalories()));
+    }
+
+    @Test
+    void femaleFloorIs1200OrBmr() {
+        // female 30y 170cm 50kg sedentary: BMR 1251.5, TDEE 1501.8; -1 kg/wk -> 401.8 -> floored to max(1251.5, 1200) = 1251.5
+        UserProfile p = paceProfile(Gender.FEMALE, 50, GoalType.WEIGHT_LOSS, 1.0);
+        assertEquals(0, BigDecimal.valueOf(1251.50).compareTo(targetCalculationService.calculate(p, UserTarget.builder().build()).getTargetCalories()));
+    }
+
+    @Test
+    void withoutPaceTheLegacyAdjustmentApplies() {
+        // male 30y 170cm 100kg moderate: TDEE 2972.125 - 500 = 2472.125
+        UserProfile p = paceProfile(Gender.MALE, 100, GoalType.WEIGHT_LOSS, null);
+        p.setActivityLevel(ActivityLevel.MODERATE);
+        assertEquals(0, BigDecimal.valueOf(2472.13).compareTo(targetCalculationService.calculate(p, UserTarget.builder().build()).getTargetCalories()));
+    }
 }

@@ -66,7 +66,9 @@ class UserProfileServiceTest {
                         BigDecimal.valueOf(168),
                         BigDecimal.valueOf(65),
                         ActivityLevel.MODERATE,
-                        GoalType.WEIGHT_GAIN
+                        GoalType.WEIGHT_GAIN,
+                        null,
+                        null
                 );
 
 //        when(userProfileRepository.findByUserId(userId))
@@ -114,7 +116,9 @@ class UserProfileServiceTest {
                         BigDecimal.valueOf(168),
                         BigDecimal.valueOf(65),
                         ActivityLevel.MODERATE,
-                        GoalType.WEIGHT_GAIN
+                        GoalType.WEIGHT_GAIN,
+                        null,
+                        null
                 );
 
         UserProfile existingProfile =
@@ -183,5 +187,55 @@ class UserProfileServiceTest {
                 userProfileService.getProfile(userId);
 
         assertNotNull(response);
+    }
+
+    @Test
+    void lossTargetMustBeBelowCurrentWeight() {
+        UUID userId = UUID.randomUUID();
+        UserProfile existing = UserProfile.builder().userId(userId).gender(Gender.MALE)
+                .weightKg(BigDecimal.valueOf(80)).build();
+        when(userProfileRepository.findByUserId(userId)).thenReturn(Optional.of(existing));
+
+        UserProfileRequest request = new UserProfileRequest(null, null, null, null, null, null,
+                GoalType.WEIGHT_LOSS, BigDecimal.valueOf(85), BigDecimal.valueOf(0.5));
+
+        com.calorie.management.exception.InvalidRequestException ex = org.junit.jupiter.api.Assertions.assertThrows(
+                com.calorie.management.exception.InvalidRequestException.class,
+                () -> userProfileService.updateProfile(userId, request));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().startsWith("targetWeightKg: must be below"));
+        verify(userProfileRepository, never()).save(any(UserProfile.class));
+    }
+
+    @Test
+    void gainTargetMustBeAboveCurrentWeight() {
+        UUID userId = UUID.randomUUID();
+        UserProfile existing = UserProfile.builder().userId(userId).gender(Gender.MALE)
+                .weightKg(BigDecimal.valueOf(60)).build();
+        when(userProfileRepository.findByUserId(userId)).thenReturn(Optional.of(existing));
+
+        UserProfileRequest request = new UserProfileRequest(null, null, null, null, null, null,
+                GoalType.WEIGHT_GAIN, BigDecimal.valueOf(60), BigDecimal.valueOf(0.25));
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.calorie.management.exception.InvalidRequestException.class,
+                () -> userProfileService.updateProfile(userId, request));
+    }
+
+    @Test
+    void maintenanceClearsTargetAndPace() {
+        UUID userId = UUID.randomUUID();
+        User user = User.builder().id(userId).email("m@calcfit.dev").build();
+        UserProfile existing = UserProfile.builder().userId(userId).user(user).gender(Gender.FEMALE)
+                .weightKg(BigDecimal.valueOf(60)).goalType(GoalType.WEIGHT_LOSS)
+                .targetWeightKg(BigDecimal.valueOf(55)).weeklyPaceKg(BigDecimal.valueOf(0.5)).build();
+        when(userProfileRepository.findByUserId(userId)).thenReturn(Optional.of(existing));
+        when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(i -> i.getArgument(0));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        userProfileService.updateProfile(userId, new UserProfileRequest(null, null, null, null, null, null,
+                GoalType.MAINTENANCE, null, null));
+
+        org.junit.jupiter.api.Assertions.assertNull(existing.getTargetWeightKg());
+        org.junit.jupiter.api.Assertions.assertNull(existing.getWeeklyPaceKg());
     }
 }

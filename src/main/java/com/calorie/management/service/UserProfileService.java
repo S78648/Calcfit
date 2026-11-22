@@ -5,6 +5,7 @@ import com.calorie.management.entity.User;
 import com.calorie.management.entity.UserProfile;
 import com.calorie.management.entity.UserTarget;
 import com.calorie.management.enums.Gender;
+import com.calorie.management.enums.GoalType;
 import com.calorie.management.exception.InvalidRequestException;
 import com.calorie.management.exception.ResourceNotFoundException;
 import com.calorie.management.repository.UserProfileRepository;
@@ -120,7 +121,9 @@ public class UserProfileService {
                 profile.getHeightCm(),
                 profile.getWeightKg(),
                 profile.getActivityLevel(),
-                profile.getGoalType()
+                profile.getGoalType(),
+                profile.getTargetWeightKg(),
+                profile.getWeeklyPaceKg()
         );
     }
 
@@ -141,75 +144,31 @@ public class UserProfileService {
         );
     }
 
-    private MicronutrientResponse buildMicronutrientResponse(
-            UserProfile profile) {
-
-        Integer age = profile.getAge();
+    /**
+     * Adult RDA by sex (values unchanged from before; the age-specific branches returned the
+     * same numbers, so they were folded together). Non-binary / unknown use the midpoint defaults.
+     * Vitamin B12 is 2.4 mcg for all adults.
+     */
+    private MicronutrientResponse buildMicronutrientResponse(UserProfile profile) {
         Gender gender = profile.getGender();
-
-        if (gender == Gender.MALE && age != null && age >= 19 && age <= 50) {
-            return new MicronutrientResponse(
-                    BigDecimal.valueOf(900),
-                    BigDecimal.valueOf(90),
-                    BigDecimal.valueOf(15),
-                    BigDecimal.valueOf(15),
-                    BigDecimal.valueOf(1000),
-                    BigDecimal.valueOf(8),
-                    BigDecimal.valueOf(420),
-                    BigDecimal.valueOf(11),
-                    BigDecimal.valueOf(3400)
-            );
-        } else if (gender == Gender.FEMALE && age != null && age >= 19 && age <= 50) {
-            return new MicronutrientResponse(
-                    BigDecimal.valueOf(700),
-                    BigDecimal.valueOf(75),
-                    BigDecimal.valueOf(15),
-                    BigDecimal.valueOf(15),
-                    BigDecimal.valueOf(1000),
-                    BigDecimal.valueOf(18),
-                    BigDecimal.valueOf(320),
-                    BigDecimal.valueOf(8),
-                    BigDecimal.valueOf(2600)
-            );
-        }
-
+        //                  vitA  vitC vitD vitE  B12   Ca    Fe  Mg   Zn  K
         if (gender == Gender.MALE) {
-            return new MicronutrientResponse(
-                    BigDecimal.valueOf(900),
-                    BigDecimal.valueOf(90),
-                    BigDecimal.valueOf(15),
-                    BigDecimal.valueOf(15),
-                    BigDecimal.valueOf(1000),
-                    BigDecimal.valueOf(8),
-                    BigDecimal.valueOf(420),
-                    BigDecimal.valueOf(11),
-                    BigDecimal.valueOf(3400)
-            );
-        } else if (gender == Gender.FEMALE) {
-            return new MicronutrientResponse(
-                    BigDecimal.valueOf(700),
-                    BigDecimal.valueOf(75),
-                    BigDecimal.valueOf(15),
-                    BigDecimal.valueOf(15),
-                    BigDecimal.valueOf(1000),
-                    BigDecimal.valueOf(18),
-                    BigDecimal.valueOf(320),
-                    BigDecimal.valueOf(8),
-                    BigDecimal.valueOf(2600)
-            );
+            return micros(900, 90, 15, 15, 2.4, 1000, 8, 420, 11, 3400);
         }
+        if (gender == Gender.FEMALE) {
+            return micros(700, 75, 15, 15, 2.4, 1000, 18, 320, 8, 2600);
+        }
+        return micros(800, 82, 15, 15, 2.4, 1000, 12, 370, 9, 3000);
+    }
 
+    private static MicronutrientResponse micros(
+            double vitA, double vitC, double vitD, double vitE, double b12,
+            double calcium, double iron, double magnesium, double zinc, double potassium) {
         return new MicronutrientResponse(
-                BigDecimal.valueOf(800),
-                BigDecimal.valueOf(82),
-                BigDecimal.valueOf(15),
-                BigDecimal.valueOf(15),
-                BigDecimal.valueOf(1000),
-                BigDecimal.valueOf(12),
-                BigDecimal.valueOf(370),
-                BigDecimal.valueOf(9),
-                BigDecimal.valueOf(3000)
-        );
+                BigDecimal.valueOf(vitA), BigDecimal.valueOf(vitC), BigDecimal.valueOf(vitD),
+                BigDecimal.valueOf(vitE), BigDecimal.valueOf(b12),
+                BigDecimal.valueOf(calcium), BigDecimal.valueOf(iron), BigDecimal.valueOf(magnesium),
+                BigDecimal.valueOf(zinc), BigDecimal.valueOf(potassium));
     }
 
     private UserDashboardResponse buildDashboardResponse(UUID userId) {
@@ -281,6 +240,40 @@ public class UserProfileService {
 
         if (request.goalType() != null) {
             profile.setGoalType(request.goalType());
+        }
+
+        if (request.targetWeightKg() != null) {
+            profile.setTargetWeightKg(request.targetWeightKg());
+        }
+
+        if (request.weeklyPaceKg() != null) {
+            profile.setWeeklyPaceKg(request.weeklyPaceKg());
+        }
+
+        normalizeAndValidateGoal(profile);
+    }
+
+    /**
+     * Maintenance has no target/pace. For lose/gain the target must sit on the right side of the
+     * current weight. Messages use "field: reason" so the client can show them under the input.
+     */
+    private void normalizeAndValidateGoal(UserProfile profile) {
+        GoalType goal = profile.getGoalType();
+        if (goal == GoalType.MAINTENANCE) {
+            profile.setTargetWeightKg(null);
+            profile.setWeeklyPaceKg(null);
+            return;
+        }
+        BigDecimal target = profile.getTargetWeightKg();
+        BigDecimal current = profile.getWeightKg();
+        if (goal == null || target == null || current == null) {
+            return;
+        }
+        if (goal == GoalType.WEIGHT_LOSS && target.compareTo(current) >= 0) {
+            throw new InvalidRequestException("targetWeightKg: must be below your current weight (" + current.stripTrailingZeros().toPlainString() + " kg) to lose weight");
+        }
+        if (goal == GoalType.WEIGHT_GAIN && target.compareTo(current) <= 0) {
+            throw new InvalidRequestException("targetWeightKg: must be above your current weight (" + current.stripTrailingZeros().toPlainString() + " kg) to gain weight");
         }
     }
 
