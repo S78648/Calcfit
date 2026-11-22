@@ -160,6 +160,23 @@ class TargetCalculationServiceTest {
     }
 
     @Test
+    void nonBinaryBmrIsMidpointOfMaleAndFemale() {
+        // 30y, 170cm, 70kg, sedentary: base = 700 + 1062.5 - 150 = 1612.5
+        java.util.function.Function<Gender, BigDecimal> bmrFor = g -> {
+            UserProfile p = UserProfile.builder()
+                    .age(30).gender(g)
+                    .heightCm(BigDecimal.valueOf(170)).weightKg(BigDecimal.valueOf(70))
+                    .activityLevel(ActivityLevel.SEDENTARY).goalType(GoalType.MAINTENANCE)
+                    .build();
+            return targetCalculationService.calculate(p, UserTarget.builder().build()).getBmr();
+        };
+
+        assertEquals(0, BigDecimal.valueOf(1617.5).compareTo(bmrFor.apply(Gender.MALE)));
+        assertEquals(0, BigDecimal.valueOf(1451.5).compareTo(bmrFor.apply(Gender.FEMALE)));
+        assertEquals(0, BigDecimal.valueOf(1534.5).compareTo(bmrFor.apply(Gender.NON_BINARY)));
+    }
+
+    @Test
     void shouldReturnCorrectActivityFactors() {
 
         assertEquals(
