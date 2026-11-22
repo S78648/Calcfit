@@ -47,5 +47,11 @@ public class UserProfile {
 
     @Enumerated(EnumType.STRING)
     private GoalType goalType;
+
+    /** Lose/gain only; null for maintenance (target = current weight). */
+    private BigDecimal targetWeightKg;
+
+    /** kg per week (0.25-1.0) for lose/gain; null -> goal's default +/-500 kcal/day. */
+    private BigDecimal weeklyPaceKg;
 }
 

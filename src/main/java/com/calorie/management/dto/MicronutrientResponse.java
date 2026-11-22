@@ -8,6 +8,7 @@ public record MicronutrientResponse(
         BigDecimal vitaminCMg,
         BigDecimal vitaminDMcg,
         BigDecimal vitaminEMg,
+        BigDecimal vitaminB12Mcg,
 
         BigDecimal calciumMg,
         BigDecimal ironMg,

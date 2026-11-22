@@ -15,5 +15,7 @@ public record UserProfileResponse(
         BigDecimal heightCm,
         BigDecimal weightKg,
         ActivityLevel activityLevel,
-        GoalType goalType
+        GoalType goalType,
+        BigDecimal targetWeightKg,
+        BigDecimal weeklyPaceKg
 ) {}

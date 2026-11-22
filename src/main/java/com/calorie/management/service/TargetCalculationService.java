@@ -3,6 +3,7 @@ package com.calorie.management.service;
 import com.calorie.management.entity.UserProfile;
 import com.calorie.management.entity.UserTarget;
 import com.calorie.management.enums.Gender;
+import com.calorie.management.enums.GoalType;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -60,10 +61,39 @@ public class TargetCalculationService {
         double height = profile.getHeightCm().doubleValue();
         double tdee = getTdee(profile, weight, height,target);
 
-        double calories = tdee + profile.getGoalType().getCalorieAdjustment();
+        double calories = tdee + dailyAdjustment(profile);
+
+        // Safety floor for deficits: never below BMR nor the common minimum intake.
+        if (profile.getGoalType() == GoalType.WEIGHT_LOSS) {
+            double floor = Math.max(target.getBmr().doubleValue(), minimumCalories(profile.getGender()));
+            calories = Math.max(calories, floor);
+        }
 
         return BigDecimal.valueOf(calories)
                 .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /** ~7700 kcal per kg of body weight. */
+    static final double KCAL_PER_KG = 7700;
+
+    /**
+     * kcal/day added to TDEE. With a weekly pace: pace x 7700 / 7 (0.5 kg/week = 550 kcal/day),
+     * signed by the goal. Without one (maintenance, or profiles created before V8): the goal's
+     * default +/-500.
+     */
+    static double dailyAdjustment(UserProfile profile) {
+        GoalType goal = profile.getGoalType();
+        BigDecimal pace = profile.getWeeklyPaceKg();
+        if (goal == GoalType.MAINTENANCE || pace == null) {
+            return goal.getCalorieAdjustment();
+        }
+        double sign = Math.signum(goal.getCalorieAdjustment());
+        return sign * pace.doubleValue() * KCAL_PER_KG / 7;
+    }
+
+    /** Common clinical minimum daily intake: 1200 kcal (female), 1500 kcal otherwise. */
+    static double minimumCalories(Gender gender) {
+        return gender == Gender.FEMALE ? 1200 : 1500;
     }
 
     /** Mifflin-St Jeor: +5 male, -161 female; non-binary uses the midpoint (-78). */

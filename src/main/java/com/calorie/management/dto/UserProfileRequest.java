@@ -30,5 +30,13 @@ public record UserProfileRequest(
         BigDecimal weightKg,
 
         ActivityLevel activityLevel,
-        GoalType goalType
+        GoalType goalType,
+
+        /* Lose: below current weight; gain: above. Ignored for maintenance. */
+        @DecimalMin("20") @DecimalMax("500")
+        BigDecimal targetWeightKg,
+
+        /* kg per week, lose/gain only. */
+        @DecimalMin("0.25") @DecimalMax("1.0")
+        BigDecimal weeklyPaceKg
 ) {}
