@@ -66,15 +66,18 @@ public class TargetCalculationService {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
+    /** Mifflin-St Jeor: +5 male, -161 female; non-binary uses the midpoint (-78). */
+    static int sexConstant(Gender gender) {
+        return switch (gender) {
+            case MALE -> 5;
+            case FEMALE -> -161;
+            case NON_BINARY -> -78;
+        };
+    }
+
     private static double getTdee(UserProfile profile, double weight, double height,UserTarget target) {
         int age = profile.getAge();
-        double bmr;
-
-        if (profile.getGender()== Gender.MALE) {
-            bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-        } else {
-            bmr = 10 * weight + 6.25 * height - 5 * age - 161;
-        }
+        double bmr = 10 * weight + 6.25 * height - 5 * age + sexConstant(profile.getGender());
          double tdee = bmr * profile.getActivityLevel().getFactor();
 
         target.setBmr(BigDecimal.valueOf(bmr));
